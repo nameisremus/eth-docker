@@ -39,7 +39,7 @@ services:
     networks:
       default:
         aliases:
-          - vc
+          - ${VC_ALIAS}
     <<: *logging
     entrypoint:
       - docker-entrypoint-vc.sh
@@ -51,7 +51,6 @@ services:
       - ${CL_NODE:-http://consensus:5052}
       - --broadcast
       - attestations,sync-committee,blocks,subscriptions
-      - --produce-block-v3
       - --debug-level=${LOG_LEVEL}
       - --metrics
       - --metrics-address
@@ -130,7 +129,7 @@ services:
     entrypoint:
       - keymanager.sh
       - /var/lib/lighthouse/validators/api-token.txt
-      - vc
+      - ${VC_ALIAS}
 
 volumes:
   lhvalidator-data:
