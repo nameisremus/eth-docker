@@ -23,10 +23,12 @@ services:
       - CLIENT=${COMPOSE_FILE}
     command:
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=40d
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-40d}
       - --web.console.libraries=/usr/share/prometheus/console_libraries
       - --web.console.templates=/usr/share/prometheus/consoles
     <<: *logging
+    extra_hosts:  # So we can scrape targets on the host
+      - "host.docker.internal:host-gateway"
     depends_on:
       - blackbox-exporter
       - json-exporter
@@ -34,10 +36,10 @@ services:
 
   ethereum-metrics-exporter:
     restart: "unless-stopped"
-    image: samcm/ethereum-metrics-exporter:0.24.0-debian
+    image: samcm/ethereum-metrics-exporter:debian-latest
     entrypoint:
       - /ethereum-metrics-exporter
-      - --consensus-url=${CL_NODE}
+      - --consensus-url=http://consensus:${CL_REST_PORT:-5052}
       - --execution-url=http://execution:${EL_RPC_PORT:-8545}
     <<: *logging
 

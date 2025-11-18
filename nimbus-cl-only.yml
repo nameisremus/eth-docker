@@ -32,16 +32,17 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - jwtsecret:/var/lib/nimbus/ee-secret
     environment:
-      - RAPID_SYNC_URL=${RAPID_SYNC_URL}
+      - CHECKPOINT_SYNC_URL=${CHECKPOINT_SYNC_URL}
       - NETWORK=${NETWORK}
       - JWT_SECRET=${JWT_SECRET}
       - MEV_BOOST=${MEV_BOOST}
+      - MEV_BUILD_FACTOR=${MEV_BUILD_FACTOR}  # Unused, here to avoid runtime errors in case of faulty logic
       - MEV_NODE=${MEV_NODE}
       - LOG_LEVEL=${LOG_LEVEL}
       - DOPPELGANGER=false
       - CL_EXTRAS=${CL_EXTRAS:-}
       - VC_EXTRAS=
-      - ARCHIVE_NODE=${ARCHIVE_NODE:-}
+      - ARCHIVE_NODE=${CL_ARCHIVE_NODE:-}
       - GRAFFITI=${GRAFFITI:-}
       - DEFAULT_GRAFFITI=true
       - WEB3SIGNER=false
@@ -53,7 +54,8 @@ services:
       default:
         aliases:
           - eth2
-          - ${NETWORK}-consensus
+          # This allows multiple Eth Docker stacks all connected to the same bridge network
+          - ${CL_ALIAS:-default-consensus}
     <<: *logging
     entrypoint:
       - docker-entrypoint.sh
@@ -63,7 +65,7 @@ services:
       - --status-bar=false
       - --tcp-port=${CL_P2P_PORT:-9000}
       - --udp-port=${CL_P2P_PORT:-9000}
-      - --max-peers=${CL_MAX_PEER_COUNT:-160}
+      - ${CL_MAX_PEER_COUNT:+--max-peers=${CL_MAX_PEER_COUNT}}
       - --el=${EL_NODE}
       - --jwt-secret=/var/lib/nimbus/ee-secret/jwtsecret
       - --rest
@@ -82,7 +84,7 @@ services:
       - metrics.instance=consensus
       - metrics.network=${NETWORK}
 
-# Uses keystore-m file and CL, so does belong here
+  # Uses keystore-m file and CL, so does belong here
   validator-exit:
     profiles: ["tools"]
     restart: "no"

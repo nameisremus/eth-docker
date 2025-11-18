@@ -19,6 +19,10 @@ services:
         - DOCKER_REPO=${MEV_DOCKER_REPO:-flashbots/mev-boost}
     image: mev-boost:local
     pull_policy: never
+    networks:
+      default:
+        aliases:
+          - ${MEV_ALIAS:-default-mev}  # This allows multiple Eth Docker stacks all connected to the same bridge network
     entrypoint:
       - /app/mev-boost
       - -addr
@@ -31,4 +35,13 @@ services:
       - ${MEV_MIN_BID:-0}
       - -loglevel
       - ${LOG_LEVEL}
+      - -metrics
+      - -metrics-addr
+      - 0.0.0.0:18551
     <<: *logging
+    labels:
+      - metrics.scrape=true
+      - metrics.path=/metrics
+      - metrics.port=18551
+      - metrics.instance=mev-boost
+      - metrics.network=${NETWORK}

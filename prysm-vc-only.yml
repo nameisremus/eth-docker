@@ -11,21 +11,30 @@ x-build: &prysm-build
   dockerfile: ${PRYSM_DOCKERFILE}
   args:
     - BUILD_TARGET=${PRYSM_SRC_BUILD_TARGET:-'$(git describe --tags $(git rev-list --tags --max-count=1))'}
-    - SRC_REPO=${PRYSM_SRC_REPO:-https://github.com/prysmaticlabs/prysm}
+    - SRC_REPO=${PRYSM_SRC_REPO:-https://github.com/offchainlabs/prysm}
     - DOCKER_TAG=${PRYSM_DOCKER_TAG:-stable}
     - DOCKER_VC_TAG=${PRYSM_DOCKER_VC_TAG:-stable}
-    - DOCKER_REPO=${PRYSM_DOCKER_REPO:-gcr.io/prysmaticlabs/prysm/beacon-chain}
-    - DOCKER_VC_REPO=${PRYSM_DOCKER_VC_REPO:-gcr.io/prysmaticlabs/prysm/validator}
+    - DOCKER_REPO=${PRYSM_DOCKER_REPO:-gcr.io/offchainlabs/prysm/beacon-chain}
+    - DOCKER_VC_REPO=${PRYSM_DOCKER_VC_REPO:-gcr.io/offchainlabs/prysm/validator}
 
 services:
-  validator:
-    restart: "unless-stopped"
+  prysm-validator-builder:
+    restart: "no"
     build:
       target: validator
       <<: *prysm-build
     image: prysm-validator:local
     pull_policy: never
+    entrypoint: ["true"]
+
+  validator:
+    restart: "unless-stopped"
+    image: prysm-validator:local
+    pull_policy: never
     user: prysmvalidator
+    depends_on:
+      prysm-validator-builder:
+        condition: service_completed_successfully
     volumes:
       - prysmvalidator-data:/var/lib/prysm
       - /etc/localtime:/etc/localtime:ro
@@ -36,12 +45,13 @@ services:
       - GRAFFITI=${GRAFFITI:-}
       - DEFAULT_GRAFFITI=${DEFAULT_GRAFFITI:-false}
       - WEB3SIGNER=${WEB3SIGNER:-false}
+      - W3S_NODE=${W3S_NODE}
       - NETWORK=${NETWORK}
       - ENABLE_DIST_ATTESTATION_AGGR=${ENABLE_DIST_ATTESTATION_AGGR:-false}
     networks:
       default:
         aliases:
-          - ${VC_ALIAS}
+          - ${VC_ALIAS:-vc}
     <<: *logging
     entrypoint:
       - docker-entrypoint-vc.sh
@@ -86,18 +96,18 @@ services:
   create-wallet:
     profiles: ["tools"]
     restart: "no"
-    build:
-      target: validator
-      <<: *prysm-build
     image: prysm-validator:local
     pull_policy: never
     user: prysmvalidator
-    environment:
-      - NETWORK=${NETWORK}
-      - WEB3SIGNER=${WEB3SIGNER:-false}
+    depends_on:
+      prysm-validator-builder:
+        condition: service_completed_successfully
     volumes:
       - prysmvalidator-data:/var/lib/prysm
       - /etc/localtime:/etc/localtime:ro
+    environment:
+      - NETWORK=${NETWORK}
+      - WEB3SIGNER=${WEB3SIGNER:-false}
     entrypoint: create-wallet.sh
 
   validator-exit:
@@ -119,12 +129,12 @@ services:
   validator-backup:
     profiles: ["tools"]
     restart: "no"
-    build:
-      target: validator
-      <<: *prysm-build
     image: prysm-validator:local
     pull_policy: never
     user: root
+    depends_on:
+      prysm-validator-builder:
+        condition: service_completed_successfully
     volumes:
       - prysmvalidator-data:/var/lib/prysm
       - ./.eth/validator_keys:/validator_keys
@@ -151,6 +161,8 @@ services:
     image: vc-utils:local
     pull_policy: never
     user: root
+    depends_on:
+      - validator
     volumes:
       - prysmvalidator-data:/var/lib/prysm
       - ./.eth/validator_keys:/validator_keys
@@ -160,14 +172,13 @@ services:
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD:-}
       - KEY_API_PORT=${KEY_API_PORT:-7500}
       - WEB3SIGNER=${WEB3SIGNER:-false}
+      - W3S_NODE=${W3S_NODE}
       - CL_NODE=${CL_NODE}
       - PRYSM=true
-    depends_on:
-      - validator
     entrypoint:
       - keymanager.sh
       - /var/lib/prysm/auth-token
-      - ${VC_ALIAS}
+      - ${VC_ALIAS:-vc}
 
 volumes:
   prysmvalidator-data:

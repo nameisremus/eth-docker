@@ -15,7 +15,9 @@ services:
       context: ./nethermind
       dockerfile: ${NM_DOCKERFILE}
       args:
-        - BUILD_TARGET=${NM_SRC_BUILD_TARGET:-'$(git tag --sort=-committerdate | grep -E "^[0-9]+[.][0-9]+[.][0-9]+$" | head -1)'}
+        - >-
+          BUILD_TARGET=${NM_SRC_BUILD_TARGET:-'$(git tag --sort=-committerdate |
+          grep -E "^[0-9]+[.][0-9]+[.][0-9]+$" | head -1)'}
         - SRC_REPO=${NM_SRC_REPO:-https://github.com/NethermindEth/nethermind}
         - DOCKER_TAG=${NM_DOCKER_TAG:-latest}
         - DOCKER_REPO=${NM_DOCKER_REPO:-nethermind/nethermind}
@@ -25,7 +27,8 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - EL_EXTRAS=${EL_EXTRAS:-}
-      - ARCHIVE_NODE=${ARCHIVE_NODE:-}
+      - ARCHIVE_NODE=${EL_ARCHIVE_NODE:-false}
+      - MINIMAL_NODE=${EL_MINIMAL_NODE:-false}
       - AUTOPRUNE_NM=${AUTOPRUNE_NM:-true}
       - NETWORK=${NETWORK}
     volumes:
@@ -40,7 +43,8 @@ services:
       default:
         aliases:
           - eth1
-          - ${NETWORK}-execution # This allows multiple Eth Docker stacks all connected to the same central traefik
+          # This allows multiple Eth Docker stacks all connected to the same bridge network
+          - ${EL_ALIAS:-default-execution}
     <<: *logging
     entrypoint:
       - docker-entrypoint.sh
@@ -51,8 +55,8 @@ services:
       - ${EL_P2P_PORT:-30303}
       - --Network.P2PPort
       - ${EL_P2P_PORT:-30303}
-      - --Network.MaxActivePeers
-      - ${EL_MAX_PEER_COUNT:-50}
+      - ${EL_MAX_PEER_COUNT:+--Network.MaxActivePeers}
+      - ${EL_MAX_PEER_COUNT:+${EL_MAX_PEER_COUNT}}
       - --HealthChecks.Enabled
       - "true"
       - --HealthChecks.UIEnabled
@@ -73,8 +77,6 @@ services:
       - --JsonRpc.JwtSecretFile=/var/lib/nethermind/ee-secret/jwtsecret
       - --Metrics.Enabled
       - "true"
-      - --Metrics.PushGatewayUrl
-      - ""
       - --Metrics.ExposeHost
       - 0.0.0.0
       - --Metrics.ExposePort

@@ -10,7 +10,7 @@ Please see the [official documentation](https://ethdocker.com).
 
 For a quick testnet start, you can install prerequisites and configure Eth Docker, as any user not named `root`:
 
-* `cd ~ && git clone https://github.com/eth-educators/eth-docker.git && cd eth-docker`
+* `cd ~ && git clone https://github.com/ethstaker/eth-docker.git && cd eth-docker`
 * `./ethd install`
 * `./ethd config`
 
@@ -34,4 +34,4 @@ Eth Docker uses a "semver-ish" scheme.
 large.
 - Second through fourth digit, [semver](https://semver.org/).
 
-This is Eth Docker v2.15.0.0
+This is Eth Docker v2.18.0.4
